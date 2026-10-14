@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NBA Standings Predictions</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23111'/%3E%3Crect x='7' y='7' width='18' height='4.5' rx='2.25' fill='%23faf9f7'/%3E%3Crect x='7' y='13.75' width='18' height='4.5' rx='2.25' fill='%23faf9f7'/%3E%3Crect x='7' y='20.5' width='18' height='4.5' rx='2.25' fill='%23faf9f7'/%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box}
+:root{--bg:#faf9f7;--ink:#111;--mute:#8f8d88;--line:#e6e4df;--well:#f0efeb}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body.dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
+main{max-width:900px;margin:0 auto;padding:40px 20px 80px}
+header{text-align:center;margin-bottom:32px}
+h1{margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em}
+.sub{margin:8px 0 0;font-size:14px;color:var(--mute)}
+
+.bar{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px 16px;border-bottom:1px solid var(--line);margin-bottom:28px}
+.tabs{display:flex;gap:24px}
+.tab{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 0;font:inherit;font-size:15px;color:var(--mute);cursor:pointer}
+.tab[aria-selected=true]{color:var(--ink);border-color:var(--ink)}
+.actions{display:flex;gap:16px;align-items:center;padding-bottom:8px}
+.btn{background:var(--ink);color:#fff;border:0;border-radius:10px;padding:8px 18px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.link{background:none;border:0;padding:0;font:inherit;font-size:14px;color:var(--mute);text-decoration:underline;cursor:pointer}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+
+.cols{display:grid;gap:36px}
+@media(min-width:760px){.cols{grid-template-columns:1fr 1fr;gap:56px}}
+h2{margin:0 0 12px;font-size:14px;font-weight:500;color:var(--mute)}
+ol{list-style:none;margin:0;padding:0}
+
+.slot{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.num{width:22px;flex:none;text-align:right;font-size:13px;color:var(--mute)}
+.well{flex:1;min-width:0;height:48px;border-radius:14px;background:var(--well)}
+.x{flex:none;width:22px;padding:0;background:none;border:0;font-size:20px;line-height:1;color:#bdbab3;cursor:pointer}
+.x:hover{color:var(--ink)}
+.sep{display:flex;align-items:center;gap:10px;margin:16px 0 16px 32px;font-size:12px;color:var(--mute)}
+.sep::after{content:"";flex:1;border-top:1px dashed #cfccc5}
+
+.card{display:flex;align-items:center;justify-content:space-between;gap:12px;height:48px;padding:0 12px 0 16px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);font-size:15px;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.card span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lg{width:30px;height:30px;flex:none;object-fit:contain}
+b.lg{display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--mute)}
+.card.ghost{opacity:.35;box-shadow:none}
+.float{position:fixed;left:0;top:0;z-index:10;pointer-events:none;box-shadow:0 14px 30px rgba(0,0,0,.16)}
+#bank .card{margin-bottom:8px}
+.done{margin:0;font-size:14px;color:var(--mute)}
+
+.btn{min-width:112px;transition:background .2s}
+.btn.done{background:#2f7d4f}
+@media(prefers-reduced-motion:reduce){.btn{transition:none}}
+
+[hidden]{display:none!important}
+footer{margin-top:56px;text-align:center;font-size:12px}
+footer a{color:var(--mute);text-decoration:none}
+footer a:hover{color:var(--ink);text-decoration:underline}
+.tab.off{color:#cbc9c3}
+main.wide{max-width:1400px}
+
+/* bracket */
+#bracket{overflow-x:auto;padding-bottom:16px}
+.br{display:flex;gap:16px;width:max-content;margin:0 auto}
+.half{display:flex;flex-direction:column}
+.half>h2,.br>.rd>h2{text-align:center}
+.side{display:flex;flex:1;gap:16px}
+.east{flex-direction:row-reverse}
+.rd{display:flex;flex-direction:column}
+.rd h3{margin:0 0 12px;font-size:13px;font-weight:500;color:var(--mute);text-align:center}
+.ms{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:14px}
+.mw small{display:block;margin:0 0 4px 4px;font-size:11px;color:var(--mute)}
+.mt{width:132px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.tm{display:flex;align-items:center;gap:8px;width:100%;height:40px;padding:0 10px;background:none;border:0;font:inherit;font-size:13px;color:var(--ink);text-align:left;cursor:pointer}
+.tm+.tm{border-top:1px solid var(--line)}
+.tm .lg{width:22px;height:22px}
+.tm i{margin-left:auto;font-style:normal;font-weight:600;color:var(--mute)}
+.tm:disabled{cursor:default}
+.tm:not(:disabled):not(.win):not(.lose):hover{background:#f5f4f1}
+.tm.empty{background:var(--well)}
+.tm.win{background:#e7f3ea}.tm.win i{color:#2f7d4f}
+.tm.lose{background:#f8e8e7}.tm.lose i{color:#b04a46}
+.mid{text-align:center}
+.champ{height:124px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;margin-bottom:12px;font-size:12px;color:var(--mute)}
+.champ .lg{width:64px;height:64px}
+
+/* popup */
+#modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(250,249,247,.75)}
+.box{position:relative;width:min(320px,88vw);padding:28px 24px 24px;background:var(--bg);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 30px rgba(0,0,0,.12);text-align:center}
+.box p{margin:0 0 16px;font-size:16px}
+.close{position:absolute;top:8px;right:10px;width:28px;height:28px;background:none;border:0;font-size:22px;line-height:1;color:var(--mute);cursor:pointer}
+#mo{display:flex;justify-content:center;gap:8px}
+#mo button{min-width:44px;height:44px;padding:0 16px;background:var(--bg);border:1px solid var(--line);border-radius:10px;font:inherit;font-size:16px;cursor:pointer}
+#mf{width:100%;margin:0 0 16px;padding:10px 12px;background:var(--well);border:1px solid var(--line);border-radius:10px;font:inherit;font-size:13px;color:var(--ink)}
+.champ strong{font-size:15px;font-weight:600;color:var(--ink)}
+#mo button:hover,#mo button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>NBA Standings Predictions</h1>
+    <p class="sub">Drag teams into place, or tap a team to fill the next open spot.</p>
+  </header>
+
+  <div class="bar">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="west">Western</button>
+      <button class="tab" role="tab" data-tab="east">Eastern</button>
+      <button class="tab" role="tab" data-tab="bracket">Playoff bracket</button>
+    </div>
+    <div class="actions">
+      <button class="link" id="reset">Reset</button>
+      <button class="btn" id="share">Share</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <section><h2>Your standings</h2><ol id="slots"></ol></section>
+    <aside><h2>Teams <span id="left"></span></h2><div id="bank"></div></aside>
+  </div>
+  <div id="bracket" hidden></div>
+  <footer><a href="https://github.com/JakeYash" target="_blank" rel="noopener">github.com/JakeYash</a></footer>
+</main>
+<div id="modal" hidden>
+  <div class="box"><button class="close" aria-label="Close">×</button><p id="mq"></p><input id="mf" readonly hidden aria-label="Link"><div id="mo"></div></div>
+</div>
+
+<script>
+/* ---------- Config ---------- */
+// Logo files live in a "logos" folder next to this file, named by the ids below (e.g. logos/bos.svg).
+// Change the extension here if yours are PNGs. A missing file shows the abbreviation instead.
+const logo = id => "logos/" + id + ".svg";
+
+// id, full name, conference (W/E)
+const TEAMS = [
+  ["atl","Atlanta Hawks","E"],["bos","Boston Celtics","E"],["bkn","Brooklyn Nets","E"],
+  ["cha","Charlotte Hornets","E"],["chi","Chicago Bulls","E"],["cle","Cleveland Cavaliers","E"],
+  ["det","Detroit Pistons","E"],["ind","Indiana Pacers","E"],["mia","Miami Heat","E"],
+  ["mil","Milwaukee Bucks","E"],["nyk","New York Knicks","E"],["orl","Orlando Magic","E"],
+  ["phi","Philadelphia 76ers","E"],["tor","Toronto Raptors","E"],["was","Washington Wizards","E"],
+  ["dal","Dallas Mavericks","W"],["den","Denver Nuggets","W"],["gsw","Golden State Warriors","W"],
+  ["hou","Houston Rockets","W"],["lac","LA Clippers","W"],["lal","Los Angeles Lakers","W"],
+  ["mem","Memphis Grizzlies","W"],["min","Minnesota Timberwolves","W"],["nop","New Orleans Pelicans","W"],
+  ["okc","Oklahoma City Thunder","W"],["phx","Phoenix Suns","W"],["por","Portland Trail Blazers","W"],
+  ["sac","Sacramento Kings","W"],["sas","San Antonio Spurs","W"],["uta","Utah Jazz","W"]
+];
+const CONF_SEPS = {6: "Play-in", 10: ""};   // divider shown above that (0-based) slot, with its label (may be empty)
+const TABS = {
+  west:   {n: 15, conf: "W",  seps: CONF_SEPS},
+  east:   {n: 15, conf: "E",  seps: CONF_SEPS}
+};
+
+/* ---------- State ---------- */
+// state[tab] is an array of team ids (or null for an empty spot), one entry per standing spot.
+const byId = Object.fromEntries(TEAMS.map(t => [t[0], t]));
+const poolIds = k => TEAMS.filter(t => !TABS[k].conf || t[2] === TABS[k].conf).map(t => t[0]);
+const $ = s => document.querySelector(s);
+let tab = "west", drag = null;
+
+// Drops unknown/duplicate ids and pads to the right length, so bad saved data or links can't break the page.
+function clean(k, arr) {
+  const pool = poolIds(k), seen = new Set();
+  return Array.from({length: TABS[k].n}, (_, i) => {
+    const x = arr && arr[i];
+    if (pool.includes(x) && !seen.has(x)) { seen.add(x); return x; }
+    return null;
+  });
+}
+function load() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("nba-standings") || "{}"); } catch (e) {}
+  const s = {};
+  for (const k in TABS) s[k] = clean(k, saved[k]);
+  s.bracket = cleanB(saved.bracket);
+  return s;
+}
+// Bracket picks: {matchId: {w: winnerTeamId, g: seriesGames (0 for play-in games)}}
+function cleanB(o) {
+  const b = {};
+  for (const id in o || {}) {
+    const {w, g} = o[id] || {};
+    if (/^([we]p[123]|[we][a-g]|fin)$/.test(id) && byId[w]) b[id] = {w, g: g >= 4 && g <= 7 ? g : 0};
+  }
+  return b;
+}
+// Any change to spots 1-10 in either conference clears the bracket picks.
+const top10 = () => ["west", "east"].map(c => state[c].slice(0, 10).join()).join("|");
+let lastTop = null;
+const save = () => {
+  const t = top10();
+  if (lastTop !== null && t !== lastTop) state.bracket = {};
+  lastTop = t;
+  const {m} = build();   // drop picks whose matchup changed, so they can't reappear later
+  for (const id in state.bracket) if (!m[id] || !m[id].w) delete state.bracket[id];
+  try { localStorage.setItem("nba-standings", JSON.stringify(state)); } catch (e) {}
+};
+const state = load();
+
+// Shared link: #west=gsw,,den&east=...&league=...
+const hash = new URLSearchParams(location.hash.slice(1));
+for (const k in TABS) if (hash.has(k)) state[k] = clean(k, hash.get(k).split(",").map(x => x || null));
+if (hash.has("bracket")) {   // bracket=wp1:min,wa:den.5,...  (matchId:winner.games)
+  state.bracket = cleanB(Object.fromEntries(hash.get("bracket").split(",").map(p => {
+    const [id, r = ""] = p.split(":"), [w, g] = r.split(".");
+    return [id, {w, g: +g}];
+  })));
+}
+save();
+// Remove the hash once loaded, otherwise a refresh would overwrite your later edits with the link's picks.
+if (location.hash) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
+
+/* ---------- Rules ---------- */
+// Put `id` into spot i. If the spot is taken, neighbours shift by one toward the nearest empty spot.
+function insert(slots, id, i) {
+  const s = slots.slice(), from = s.indexOf(id);
+  if (from > -1) s[from] = null;
+  if (s[i] == null) { s[i] = id; return s; }
+  let hole = from;
+  if (hole < 0) {
+    for (let k = i + 1; k < s.length && hole < 0; k++) if (s[k] == null) hole = k;
+    for (let k = i - 1; k >= 0 && hole < 0; k--) if (s[k] == null) hole = k;
+  }
+  if (hole < 0) return slots;
+  if (hole > i) for (let k = hole; k > i; k--) s[k] = s[k - 1];
+  else for (let k = hole; k < i; k++) s[k] = s[k + 1];
+  s[i] = id;
+  return s;
+}
+
+/* ---------- Rendering ---------- */
+const view = () => drag && drag.active ? drag.preview : state[tab];
+const img = id =>
+  `<img class="lg" src="${logo(id)}" alt="${id.toUpperCase()}" draggable="false" onerror="this.outerHTML='<b class=lg>'+this.alt+'</b>'">`;
+const card = (t, ghost) =>
+  `<div class="card${ghost ? " ghost" : ""}" data-id="${t[0]}"><span>${t[1]}</span>${img(t[0])}</div>`;
+
+function render(animate = true) {
+  const isB = tab === "bracket";
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  document.querySelector('[data-tab="bracket"]').classList.toggle("off", !ready());
+  $(".cols").hidden = isB;
+  $("#bracket").hidden = !isB;
+  $("main").classList.toggle("wide", isB);
+  if (isB) return renderBracket();
+
+  // Remember where each card is, so cards can glide to their new position (FLIP).
+  const before = {};
+  if (animate) document.querySelectorAll(".card").forEach(c => before[c.dataset.id] = c.getBoundingClientRect());
+
+  const T = TABS[tab], slots = view(), dragId = drag && drag.active ? drag.id : null;
+  let html = "";
+  slots.forEach((id, i) => {
+    if (i in T.seps) html += `<li class="sep">${T.seps[i]}</li>`;
+    html += `<li class="slot" data-i="${i}"><span class="num">${i + 1}</span>` +
+      `<div class="well">${id ? card(byId[id], id === dragId) : ""}</div>` +
+      `<button class="x" aria-label="Remove team"${id && id !== dragId ? "" : ' style="visibility:hidden"'}>×</button></li>`;
+  });
+  $("#slots").innerHTML = html;
+
+  const rest = poolIds(tab).filter(id => !slots.includes(id));
+  $("#bank").innerHTML = rest.map(id => card(byId[id], id === dragId)).join("") || '<p class="done">All teams placed.</p>';
+  $("#left").textContent = rest.length ? "· " + rest.length + " left" : "";
+
+  document.querySelectorAll(".card").forEach(c => {
+    const o = before[c.dataset.id];
+    if (!o) return;
+    const n = c.getBoundingClientRect(), dx = o.left - n.left, dy = o.top - n.top;
+    if (dx || dy) c.animate([{transform: `translate(${dx}px,${dy}px)`}, {transform: "none"}],
+      {duration: 180, easing: "cubic-bezier(.2,.8,.2,1)"});
+  });
+}
+
+/* ---------- Bracket ---------- */
+// Everything shown is derived from the two conference lists plus state.bracket, so changing an early
+// pick automatically drops later picks that no longer make sense.
+// Match ids: w/e + p1 (7v8), p2 (9v10), p3 (loser of p1 vs winner of p2); a-d first round;
+// e-f semifinals; g conference final. "fin" is the finals.
+const ready = () => ["west", "east"].every(c => state[c].slice(0, 10).every(Boolean));
+
+function build() {
+  const B = state.bracket, m = {}, seed = {}, stand = {};
+  const mk = (id, a, b, playin) => {
+    const p = B[id], ok = a && b && p && (p.w === a || p.w === b) && (playin || p.g);
+    m[id] = {id, playin, t: [a, b], w: ok ? p.w : null, g: ok && !playin ? p.g : 0};
+  };
+  const w = id => m[id].w;
+  const l = id => m[id].t[0] === w(id) ? m[id].t[1] : m[id].t[0];
+  for (const c of ["west", "east"]) {
+    const s = state[c], k = c[0];
+    s.forEach((t, i) => { if (t) seed[t] = stand[t] = i + 1; });
+    mk(k + "p1", s[6], s[7], 1);
+    mk(k + "p2", s[8], s[9], 1);
+    mk(k + "p3", w(k + "p1") && l(k + "p1"), w(k + "p2"), 1);
+    if (w(k + "p1")) seed[w(k + "p1")] = 7;
+    if (w(k + "p3")) seed[w(k + "p3")] = 8;
+    mk(k + "a", s[0], w(k + "p3"));  mk(k + "b", s[3], s[4]);
+    mk(k + "c", s[2], s[5]);         mk(k + "d", s[1], w(k + "p1"));
+    mk(k + "e", w(k + "a"), w(k + "b"));
+    mk(k + "f", w(k + "c"), w(k + "d"));
+    mk(k + "g", w(k + "e"), w(k + "f"));
+  }
+  mk("fin", w("wg"), w("eg"));
+  return {m, seed, stand};
+}
+
+const LABEL = {p1: "Winner takes 7 seed", p2: "Loser is out", p3: "Winner takes 8 seed"};
+
+function renderBracket() {
+  const {m, seed, stand} = build();
+  const team = (mt, i) => {
+    const id = mt.t[i];
+    if (!id) return '<div class="tm empty"></div>';
+    const cls = mt.w ? (mt.w === id ? " win" : " lose") : "";
+    const tag = !mt.w ? "" : mt.playin ? (mt.w === id ? "W" : "L") : mt.w === id ? 4 : mt.g - 4;
+    return `<button class="tm${cls}" data-m="${mt.id}" data-t="${id}"${mt.t[0] && mt.t[1] ? "" : " disabled"}>` +
+      `${img(id)}<span>${id.toUpperCase()} (${(mt.playin ? stand : seed)[id]})</span><i>${tag}</i></button>`;
+  };
+  const box = id => `<div class="mw">${LABEL[id.slice(1)] ? `<small>${LABEL[id.slice(1)]}</small>` : ""}` +
+    `<div class="mt">${team(m[id], 0)}${team(m[id], 1)}</div></div>`;
+  const col = (title, ids) => `<div class="rd"><h3>${title}</h3><div class="ms">${ids.map(box).join("")}</div></div>`;
+  const half = (k, name) => `<div class="half"><h2>${name}</h2><div class="side${k === "e" ? " east" : ""}">` +
+    col("Play-in", [k + "p1", k + "p2", k + "p3"]) +
+    col("First round", [..."abcd"].map(x => k + x)) +
+    col("Semifinals", [k + "e", k + "f"]) +
+    col("Conference finals", [k + "g"]) + "</div></div>";
+  const champ = m.fin.w;
+  $("#bracket").innerHTML = `<div class="br">${half("w", "Western conference")}` +
+    `<div class="rd"><h2>&nbsp;</h2><h3>Finals</h3><div class="ms"><div class="mid">` +
+    `<div class="champ">${champ ? "<strong>Champions!</strong>" + img(champ) + "<span>" + byId[champ][1] + "</span>" : ""}</div>${box("fin")}</div></div></div>` +
+    `${half("e", "Eastern conference")}</div>`;
+}
+
+// Click a team: play-in games pick the winner right away; series ask how many games first.
+$("#bracket").addEventListener("click", e => {
+  const b = e.target.closest(".tm[data-m]");
+  if (!b || b.disabled) return;
+  const id = b.dataset.m, t = b.dataset.t, p = state.bracket[id];
+  if (build().m[id].playin) { state.bracket[id] = {w: t, g: 0}; save(); render(); return; }
+  modal(byId[t][1] + " in how many games?", [4, 5, 6, 7], n => {
+    state.bracket[id] = {w: t, g: +n}; save(); render();
+  }, p && p.w === t ? p.g : 0);
+});
+
+/* ---------- Popup ---------- */
+// text: the question; opts: button labels; pick(label) runs when one is chosen;
+// selected: the label shown as the dark/primary button; field: optional read-only text to copy.
+function modal(text, opts = [], pick, selected, field) {
+  $("#mq").textContent = text;
+  $("#mf").hidden = !field;
+  $("#mf").value = field || "";
+  $("#mo").innerHTML = opts.map(n => `<button${n === selected ? ' class="on"' : ""}>${n}</button>`).join("");
+  $("#mo").onclick = e => { const b = e.target.closest("button"); if (b) { closeModal(); pick(b.textContent); } };
+  $("#modal").hidden = false;
+  if (field) $("#mf").select();
+}
+const closeModal = () => { $("#modal").hidden = true; };
+$("#modal").onclick = e => { if (e.target.id === "modal" || e.target.closest(".close")) closeModal(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+/* ---------- Dragging (pointer events: mouse, touch, pen) ---------- */
+// Mouse: drag starts after a few pixels. Touch: press and hold briefly, so normal scrolling still works.
+document.addEventListener("pointerdown", e => {
+  const c = e.target.closest("#slots .card, #bank .card");
+  if (!c || drag || e.button) return;
+  const d = drag = {id: c.dataset.id, pid: e.pointerId, x0: e.clientX, y0: e.clientY,
+                    x: e.clientX, y: e.clientY, touch: e.pointerType === "touch", active: false};
+  if (d.touch) {
+    d.timer = setTimeout(() => drag === d && begin(), 220);
+    // Touch events keep targeting the original card even after it's re-rendered away, and they stop
+    // reaching `document`, so the scroll-blocking listener also has to sit on the card itself.
+    c.addEventListener("touchmove", ev => { if (drag && drag.active) ev.preventDefault(); }, {passive: false});
+  }
+});
+
+function begin() {
+  const d = drag, r = document.querySelector(`.card[data-id="${d.id}"]`).getBoundingClientRect();
+  d.active = true;
+  d.preview = state[tab];
+  d.ox = d.x0 - r.left; d.oy = d.y0 - r.top;
+  d.fl = document.querySelector(`.card[data-id="${d.id}"]`).cloneNode(true);
+  d.fl.classList.add("float");
+  d.fl.style.width = r.width + "px";
+  d.fl.style.transform = `translate(${r.left}px,${r.top}px) scale(1.03)`;
+  document.body.append(d.fl);
+  document.body.classList.add("dragging");
+  if (navigator.vibrate) navigator.vibrate(8);
+  render();
+  tick();
+}
+
+document.addEventListener("pointermove", e => {
+  const d = drag;
+  if (!d || e.pointerId !== d.pid) return;
+  d.x = e.clientX; d.y = e.clientY;
+  if (!d.active) {
+    if (Math.hypot(d.x - d.x0, d.y - d.y0) < (d.touch ? 8 : 4)) return;
+    if (d.touch) { clearTimeout(d.timer); drag = null; }   // finger moved before the hold: it's a scroll
+    else begin();
+    return;
+  }
+  d.fl.style.transform = `translate(${d.x - d.ox}px,${d.y - d.oy}px) scale(1.03)`;
+});
+
+// Runs every frame while dragging: scrolls near screen edges and previews the drop.
+function tick() {
+  const d = drag;
+  if (!d || !d.active) return;
+  if (d.y < 70) scrollBy(0, -10); else if (d.y > innerHeight - 70) scrollBy(0, 10);
+  const el = document.elementFromPoint(d.x, d.y);
+  const row = el && el.closest(".slot"), bank = el && el.closest("aside");
+  const key = row ? "i" + row.dataset.i : bank ? "bank" : null;
+  if (key && key !== d.key) {
+    d.key = key;
+    d.preview = row ? insert(state[tab], d.id, +row.dataset.i) : state[tab].map(x => x === d.id ? null : x);
+    render();
+  }
+  requestAnimationFrame(tick);
+}
+
+function finish(commit) {
+  const d = drag;
+  if (!d) return;
+  clearTimeout(d.timer);
+  drag = null;
+  if (d.active) {
+    d.fl.remove();
+    document.body.classList.remove("dragging");
+    if (commit) { state[tab] = d.preview; save(); }
+  } else if (commit && !state[tab].includes(d.id)) {          // a tap on a bank card
+    const s = state[tab].slice(), i = s.indexOf(null);
+    if (i > -1) { s[i] = d.id; state[tab] = s; save(); }
+  }
+  render();
+}
+document.addEventListener("pointerup", () => finish(true));
+document.addEventListener("pointercancel", () => finish(false));
+
+// While a touch drag is active, stop the page from scrolling under the finger.
+document.addEventListener("touchmove", e => { if (drag && drag.active) e.preventDefault(); }, {passive: false});
+document.addEventListener("contextmenu", e => { if (e.target.closest(".card")) e.preventDefault(); });
+
+/* ---------- Buttons ---------- */
+document.querySelectorAll(".tab").forEach(b => b.onclick = () => {
+  if (b.dataset.tab === "bracket" && !ready()) {
+    return modal("Finish your top 10 in both the Western and Eastern conferences first.");
+  }
+  tab = b.dataset.tab;
+  render(false);
+});
+
+$("#slots").addEventListener("click", e => {
+  const x = e.target.closest(".x");
+  if (!x) return;
+  state[tab] = state[tab].map((id, i) => i === +x.parentNode.dataset.i ? null : id);
+  save(); render();
+});
+
+$("#reset").onclick = () => modal("Clear this tab's predictions?", ["Cancel", "Clear"], v => {
+  if (v !== "Clear") return;
+  if (tab === "bracket") state.bracket = {};
+  else state[tab] = Array(TABS[tab].n).fill(null);
+  save(); render(false);
+}, "Clear");
+
+// Copies text; falls back to a hidden textarea where the clipboard API isn't available.
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+  const t = document.createElement("textarea");
+  t.value = text; document.body.append(t); t.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (e) {}
+  t.remove();
+  return ok;
+}
+
+$("#share").onclick = async () => {
+  const b = $("#share");
+  const url = location.href.split("#")[0] + "#" +
+    Object.keys(TABS).map(k => k + "=" + state[k].map(x => x || "").join(",")).join("&") +
+    "&bracket=" + Object.entries(state.bracket).map(([id, p]) => id + ":" + p.w + (p.g ? "." + p.g : "")).join(",");
+  if (await copy(url)) {
+    b.textContent = "Link copied ✓";
+    b.classList.add("done");
+    setTimeout(() => { b.textContent = "Share"; b.classList.remove("done"); }, 1800);
+  } else modal("Copy your link:", [], null, 0, url);
+};
+
+render(false);
+</script>
+</body>
+</html>
